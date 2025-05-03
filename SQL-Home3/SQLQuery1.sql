@@ -50,9 +50,9 @@ INSERT INTO [Customer] VALUES
 (3, 'Justin Bieber', 'Peace st. 20', 'Biba@gmail.com');
 
 INSERT INTO [Delivery] VALUES
-(1, 'Delivery man', 300.00),
-(2, 'Self pickup', 0.00),
-(3, 'КУРЬЕР', 500.00);
+(1, 'Delivery man', 300),
+(2, 'Self pickup', 0),
+(3, 'КУРЬЕР', 500);
 
 -- Заказы
 INSERT INTO [OrderTable] VALUES
