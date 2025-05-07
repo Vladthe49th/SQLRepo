@@ -54,7 +54,6 @@ INSERT INTO [Delivery] VALUES
 (2, 'Self pickup', 0),
 (3, 'КУРЬЕР', 500);
 
--- Заказы
 INSERT INTO [OrderTable] VALUES
 (1, 1, 1, 1),
 (2, 1, 2, 1),
