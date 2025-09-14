@@ -18,7 +18,6 @@ namespace Hitman_Simulator
 
         public string Codename => throw new NotImplementedException();
 
-        // Основний конструктор, який очікує (id, name, suspicionLevel)
         public Target(int id, string name, int suspicionLevel = 0)
         {
             Id = id;
@@ -26,7 +25,7 @@ namespace Hitman_Simulator
             SuspicionLevel = suspicionLevel;
         }
 
-        // Додатковий конструктор для зворотної сумісності
+  
         public Target(string name) : this(0, name, 0) { }
 
         public void Move()
