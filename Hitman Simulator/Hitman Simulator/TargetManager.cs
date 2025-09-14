@@ -3,23 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Hitman_Simulator.HitmanSimulator.Core;
 
 namespace Hitman_Simulator
 {
-    public class TargetManager
+    public class TargetManager : ITargetManager
     {
-        private readonly List<Target> _targets = new List<Target>();
+        private readonly List<ITarget> _targets = new List<ITarget>();
 
-        public void AddTarget(Target target) => _targets.Add(target);
+        public void AddTarget(ITarget target) => _targets.Add(target);
 
-        public IEnumerable<Target> GetAliveTargets() => _targets.Where(t => t.IsAlive);
+        public IEnumerable<ITarget> GetAliveTargets() => _targets.Where(t => t.IsAlive);
 
-        public Target? GetRandomTarget()
+        public ITarget? GetRandomTarget()
         {
-            return _targets.Where(t => t.IsAlive)
-                           .OrderBy(_ => Guid.NewGuid())
-                           .FirstOrDefault();
+            var alive = _targets.Where(t => t.IsAlive).ToList();
+            if (!alive.Any()) return null;
+
+            return alive[new Random().Next(alive.Count)];
         }
     }
+
 
 }

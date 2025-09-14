@@ -6,14 +6,21 @@ using System.Threading.Tasks;
 
 namespace Hitman_Simulator
 {
-    public interface ITarget
+    namespace HitmanSimulator.Core
     {
-        int Id { get; }
-        string Name { get; }
-        int SuspicionLevel { get; set; }
-        bool IsAlive { get; }
+        public interface ITarget
+        {
+            int Id { get; }
+            string Name { get; }
+            string Codename { get; }
+            int SuspicionLevel { get; set; }
+            bool IsAlive { get; }
 
-        void Move();
+            void Move();
+            void Eliminate();
+        }
     }
+
+
 
 }

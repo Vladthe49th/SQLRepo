@@ -3,11 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Hitman_Simulator.HitmanSimulator.Core;
 
 namespace Hitman_Simulator
 {
+
     public interface IAgent
     {
+    
+        string Name { get; }
+
+       
         string Codename { get; }
 
         void Observe(ITarget target);

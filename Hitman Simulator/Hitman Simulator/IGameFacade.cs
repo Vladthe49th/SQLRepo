@@ -7,15 +7,13 @@ using Hitman_Simulator.HitmanSimulator.Core;
 
 namespace Hitman_Simulator
 {
-    public interface IWorld
+    public interface IGameFacade
     {
-        IReadOnlyList<ITarget> Targets { get; }
-        IReadOnlyCollection<IAgent> Agents { get; }
-        event Action<ITarget>? OnTargetMoved;
-        void AddTarget(ITarget target);
+        void Initialize();
         void AddAgent(IAgent agent);
-        void Simulate();
+        void AddTargetToWorld(ITarget target);
+        void AddMission(IMission mission);
+        void RunCampaign(int stepsPerMission = 5, int stepDelayMs = 1000);
     }
-
 
 }

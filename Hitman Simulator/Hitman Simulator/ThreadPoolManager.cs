@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 
 namespace Hitman_Simulator
 {
-    public class ThreadPoolManager
+    public class ThreadPoolManager : IThreadPoolManager
     {
         public void QueueAction(Action action)
         {
             ThreadPool.QueueUserWorkItem(_ => action());
         }
     }
+
 
 }
