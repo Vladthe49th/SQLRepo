@@ -17,7 +17,7 @@ namespace HitmanSim.App
 
 
             IGameFacade game = new GameFacade(world, actionManager);
-            game.Initialize(); // підвантажить MissionPack за замовчуванням
+            game.Initialize(); 
 
           
             var agent = new Agent47();
