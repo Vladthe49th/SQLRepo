@@ -36,7 +36,6 @@ class Server
                     string message = Encoding.UTF8.GetString(buffer, 0, bytesReceived);
                     Console.WriteLine($"Сообщение от клиента: {message}");
 
-                    // Проверяем команды
                     string response;
                     if (message.ToLower() == "как дела")
                         response = "Лучше всех";
