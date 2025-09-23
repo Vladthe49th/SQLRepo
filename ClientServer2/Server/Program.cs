@@ -42,6 +42,7 @@ class Server
 
                 if (bytesReceived > 0)
                 {
+
                     messageQueue.Enqueue((clientSocket, buffer));
                     Console.WriteLine($"Додано повідомлення до черги.");
                 }
@@ -49,6 +50,32 @@ class Server
                 {
                     Console.WriteLine("Помилка при отриманні даних.");
                     break;
+
+                    string message = Encoding.UTF8.GetString(buffer, 0, bytesReceived);
+                    Console.WriteLine($"Сообщение от клиента: {message}");
+
+                    string response;
+                    if (message.ToLower() == "как дела")
+                        response = "Лучше всех";
+                    else if (message.ToLower() == "привет")
+                        response = "И тебе привет!";
+                    else if (message.ToLower() == "время")
+                        response = $"Сейчас: {DateTime.Now}";
+                    else if (message.ToLower() == "exit")
+                    {
+                        response = "Соединение закрывается...";
+                        clientSocket.Send(Encoding.UTF8.GetBytes(response));
+                        break;
+                    }
+                    else if (int.TryParse(message, out int number))
+                        response = (number + 1).ToString();
+                    else
+                        response = "Неизвестная команда";
+
+                    byte[] responseBytes = Encoding.UTF8.GetBytes(response);
+                    clientSocket.Send(responseBytes);
+                    Console.WriteLine($"Ответ серверa: {response}");
+
                 }
             }
 

@@ -9,6 +9,17 @@ class Server
     private const string DEFAULT_PORT = "27015";
     private static ConcurrentQueue<(Socket, byte[])> messageQueue = new ConcurrentQueue<(Socket, byte[])>();
 
+    // Словник команд
+    private static readonly Dictionary<string, Func<string, Task<string>>> commandHandlers =
+        new Dictionary<string, Func<string, Task<string>>>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "1", async (_) => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") }, // дата + час
+            { "2", async (_) => DateTime.Now.ToString("HH:mm:ss") },            // лише час
+            { "3", GetWeatherAsync },  // прогноз погоди
+            { "4", GetEuroRateAsync }, // курс євро
+            { "5", GetBitcoinRateAsync } // курс біткоїна
+        };
+
     static async Task Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
@@ -21,67 +32,37 @@ class Server
             var localEndPoint = new IPEndPoint(ipAddress, int.Parse(DEFAULT_PORT));
 
             var listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            listener.Bind(localEndPoint); // await Task.Run(() => listener.Bind(localEndPoint));
-            listener.Listen(10); // не блокує потік у тому сенсі, що не вимагає тривалих очікувань, тому для нього не передбачено асинхронну версію
-            Console.WriteLine("Починається прослуховування інформації від клієнта.\nБудь ласка, запустіть клієнтську програму!");
+            listener.Bind(localEndPoint);
+            listener.Listen(10);
+
+            Console.WriteLine("Очікування клієнта...");
 
             var clientSocket = await listener.AcceptAsync();
-            Console.WriteLine("Підключення з клієнтською програмою встановлено успішно!");
+            Console.WriteLine("Підключення встановлено успішно!");
 
             listener.Close();
 
-            _ = ProcessMessages(); // var processMessagesTask = ProcessMessages();
-            // знак підкреслення _ в C# називається discard (або "відкидання")
-            // результат асинхронної операції не використовується, тому зберігати посилання на Task немає сенсу
+            _ = ProcessMessages();
 
             while (true)
             {
                 var buffer = new byte[DEFAULT_BUFLEN];
-                int bytesReceived = await clientSocket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None); // можуть бути вказані флаги OutOfBandInline, Peek, DontRoute, MaxIOVectorLength, Truncated
-                // але всі ці флаги досить специфічні, деталі за посиланням https://learn.microsoft.com/uk-ua/dotnet/api/system.net.sockets.socketflags?view=net-9.0
+                int bytesReceived = await clientSocket.ReceiveAsync(new ArraySegment<byte>(buffer), SocketFlags.None);
 
                 if (bytesReceived > 0)
                 {
-
-                    messageQueue.Enqueue((clientSocket, buffer));
-                    Console.WriteLine($"Додано повідомлення до черги.");
+                    messageQueue.Enqueue((clientSocket, buffer[..bytesReceived]));
                 }
                 else
                 {
-                    Console.WriteLine("Помилка при отриманні даних.");
+                    Console.WriteLine("Клієнт відключився.");
                     break;
-
-                    string message = Encoding.UTF8.GetString(buffer, 0, bytesReceived);
-                    Console.WriteLine($"Сообщение от клиента: {message}");
-
-                    string response;
-                    if (message.ToLower() == "как дела")
-                        response = "Лучше всех";
-                    else if (message.ToLower() == "привет")
-                        response = "И тебе привет!";
-                    else if (message.ToLower() == "время")
-                        response = $"Сейчас: {DateTime.Now}";
-                    else if (message.ToLower() == "exit")
-                    {
-                        response = "Соединение закрывается...";
-                        clientSocket.Send(Encoding.UTF8.GetBytes(response));
-                        break;
-                    }
-                    else if (int.TryParse(message, out int number))
-                        response = (number + 1).ToString();
-                    else
-                        response = "Неизвестная команда";
-
-                    byte[] responseBytes = Encoding.UTF8.GetBytes(response);
-                    clientSocket.Send(responseBytes);
-                    Console.WriteLine($"Ответ серверa: {response}");
-
                 }
             }
 
-            clientSocket.Shutdown(SocketShutdown.Send);
+            clientSocket.Shutdown(SocketShutdown.Both);
             clientSocket.Close();
-            Console.WriteLine("Процес сервера завершує свою роботу!");
+            Console.WriteLine("Сервер завершив роботу.");
         }
         catch (Exception ex)
         {
@@ -96,32 +77,55 @@ class Server
             if (messageQueue.TryDequeue(out var item))
             {
                 var (clientSocket, buffer) = item;
-                string message = Encoding.UTF8.GetString(buffer).Trim('\0', '\r', '\n', ' ');
-                Console.WriteLine($" Клієнт-хозяін надіслав повідомлення!: {message}");
+                string message = Encoding.UTF8.GetString(buffer).Trim();
 
-                await Task.Delay(200);
+                Console.WriteLine($"Отримано команду від клієнта: {message}");
 
                 string response;
-                if (message == "1")
+                if (commandHandlers.TryGetValue(message.Split(' ')[0], out var handler))
                 {
-                    response = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-                }
-                else if (message == "2")
-                {
-                    response = DateTime.Now.ToString("HH:mm:ss.fff");
+                    response = await handler(message);
                 }
                 else
                 {
-                    response = "Невірна команда. Використайте 1 (дата) або 2 (час).";
+                    response = "Невідома команда. Використовуйте: 1 (дата+час), 2 (час), 3 <місто> (погода), 4 (євро), 5 (біткоїн)";
                 }
 
                 byte[] responseBytes = Encoding.UTF8.GetBytes(response);
                 await clientSocket.SendAsync(new ArraySegment<byte>(responseBytes), SocketFlags.None);
-                Console.WriteLine($"Процес сервера надсилає відповідь: {response}");
+
+                Console.WriteLine($"Надіслано клієнту: {response}");
             }
 
-            await Task.Delay(100);
+            await Task.Delay(50);
         }
     }
 
+    // --- Команди ---
+    private static async Task<string> GetWeatherAsync(string input)
+    {
+        
+        var parts = input.Split(' ', 2);
+        if (parts.Length < 2)
+            return "Вкажіть місто. Наприклад: Одеса";
+
+        string city = parts[1];
+       
+        await Task.Yield();
+        return $"Прогноз погоди для {city}: +20°C, ясно";
+    }
+
+    private static async Task<string> GetEuroRateAsync(string _)
+    {
+        await Task.Yield();
+        return "Курс EUR: 41.20 UAH";
+    }
+
+    private static async Task<string> GetBitcoinRateAsync(string _)
+    {
+        await Task.Yield();
+        return "Курс BTC: 2 580 000 UAH";
+    }
 }
+
+
