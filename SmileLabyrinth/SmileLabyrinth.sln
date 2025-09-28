@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SmileLabyrinthServer", "SmileLabyrinth\SmileLabyrinthServer.csproj", "{BC079719-0569-4769-ABBA-605EA54FF98F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LabyrinthClient", "LabyrinthClient\LabyrinthClient.csproj", "{BF88449C-BC5A-417C-B0DC-76D5C2A1BC48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared", "Shared\Shared.csproj", "{F8BEB307-03A3-481F-B6FA-E49C78FDC6E6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC079719-0569-4769-ABBA-605EA54FF98F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC079719-0569-4769-ABBA-605EA54FF98F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC079719-0569-4769-ABBA-605EA54FF98F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC079719-0569-4769-ABBA-605EA54FF98F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BF88449C-BC5A-417C-B0DC-76D5C2A1BC48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BF88449C-BC5A-417C-B0DC-76D5C2A1BC48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BF88449C-BC5A-417C-B0DC-76D5C2A1BC48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BF88449C-BC5A-417C-B0DC-76D5C2A1BC48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8BEB307-03A3-481F-B6FA-E49C78FDC6E6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8BEB307-03A3-481F-B6FA-E49C78FDC6E6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8BEB307-03A3-481F-B6FA-E49C78FDC6E6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8BEB307-03A3-481F-B6FA-E49C78FDC6E6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
