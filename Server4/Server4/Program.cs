@@ -1,228 +1,94 @@
-﻿using System.Net;
+﻿using System.Collections.Concurrent;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using System.Collections.Concurrent;
-using System.Diagnostics;
+using System.Text.Json;
 
-class Server
+class ChatMessage
 {
-    private const int DEFAULT_BUFLEN = 512;
-    private const int DEFAULT_PORT = 27015;
-    private static ConcurrentQueue<(TcpClient, byte[])> messageQueue = new ConcurrentQueue<(TcpClient, byte[])>();
-    private static TcpListener? listener;
-    private static CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-    private static ConcurrentDictionary<int, (TcpClient client, string ip, int port)> clients = new ConcurrentDictionary<int, (TcpClient, string, int)>();
-    private static int clientCounter = 0;
+    public string Type { get; set; }
+    public string Name { get; set; }
+    public string Color { get; set; }
+    public string Text { get; set; }
+    public DateTime Time { get; set; } = DateTime.Now;
+}
 
-    static async Task Main()
+class UdpChatServer
+{
+    private const int port = 9000;
+    private UdpClient? server;
+    private ConcurrentDictionary<IPEndPoint, string> clients = new(); 
+
+    public async Task StartAsync()
     {
-        string processName = Process.GetCurrentProcess().ProcessName;
-        var processes = Process.GetProcessesByName(processName);
-        if (processes.Length > 1)
-        {
-            Console.WriteLine("Сервер вже запущено.");
-            return;
-        }
-
         Console.OutputEncoding = Encoding.UTF8;
         Console.Title = "СЕРВЕРНА СТОРОНА";
-        Console.WriteLine("Процес сервера запущено!");
 
-        _ = Task.Run(async () =>
-        {
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                string? input = Console.ReadLine();
-                if (input?.ToLower() == "exit") // можна завершити роботу сервера, якщо набрати exit
-                {
-                    Console.WriteLine("Процес сервера завершує роботу...");
-                    await StopServerAsync();
-                    cancellationTokenSource.Cancel();
-                    break;
-                }
-            }
-        }, cancellationTokenSource.Token);
+        server = new UdpClient(port);
+        Console.WriteLine($"Сервер запущено на порту {port}.");
 
-        // закриття вікна консолі через Ctrl+C
-        Console.CancelKeyPress += async (sender, e) =>
-        {
-            e.Cancel = true;
-            Console.WriteLine("Сервер завершує роботу...");
-            await StopServerAsync();
-            cancellationTokenSource.Cancel();
-        };
-
-        try
-        {
-            listener = new TcpListener(IPAddress.Any, DEFAULT_PORT);
-            listener.Server.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            listener.Start();
-            Console.WriteLine("Будь ласка, запустіть одну або кілька клієнтських програм.");
-
-            _ = ProcessMessages();
-
-            while (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                try
-                {
-                    var client = await listener.AcceptTcpClientAsync().ConfigureAwait(false);
-                    int clientId = Interlocked.Increment(ref clientCounter);
-                    var clientEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
-                    clients.TryAdd(clientId, (client, clientEndPoint.Address.ToString(), clientEndPoint.Port));
-                    Console.WriteLine($"Клієнт #{clientId} підключився: IP {clientEndPoint.Address}, Порт {clientEndPoint.Port}");
-                    _ = HandleClientAsync(client, clientId);
-                }
-                catch (OperationCanceledException)
-                {
-
-                }
-                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.Interrupted || ex.SocketErrorCode == SocketError.OperationAborted)
-                {
-
-                }
-            }
-        }
-        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.AddressAlreadyInUse)
-        {
-            Console.WriteLine("Порт 27015 вже використовується.");
-            Console.ReadKey();
-        }
-        catch (Exception ex)
-        {
-            if (!cancellationTokenSource.Token.IsCancellationRequested)
-            {
-                Console.WriteLine($"Помилка: {ex.Message}");
-                Console.ReadKey();
-            }
-        }
-        finally
-        {
-            await StopServerAsync();
-            cancellationTokenSource.Dispose();
-        }
+        await ReceiveMessagesAsync();
     }
 
-    private static async Task HandleClientAsync(TcpClient client, int clientId)
+    private async Task ReceiveMessagesAsync()
     {
-        NetworkStream? stream = null;
-        try
+        while (true)
         {
-            stream = client.GetStream();
-            while (!cancellationTokenSource.Token.IsCancellationRequested && client.Connected)
+            var result = await server.ReceiveAsync();
+            var json = Encoding.UTF8.GetString(result.Buffer);
+
+            var msg = JsonSerializer.Deserialize<ChatMessage>(json);
+            if (msg == null) continue;
+
+            if (msg.Type == "Join")
             {
-                var buffer = new byte[DEFAULT_BUFLEN];
-                int bytesReceived = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationTokenSource.Token).ConfigureAwait(false);
+                clients[result.RemoteEndPoint] = msg.Name;
+                Console.WriteLine($"[{msg.Time:HH:mm}] {msg.Name} приєднався до чату");
 
-                if (bytesReceived > 0)
+                var sysMsg = new ChatMessage
                 {
-                    messageQueue.Enqueue((client, buffer[..bytesReceived]));
-                    Console.WriteLine($"Клієнт #{clientId}: Додано повідомлення до черги.");
-                }
-                else
-                {
-                    break; // клієнт від'єднався
-                }
+                    Type = "System",
+                    Text = $"{msg.Name} приєднався до чату",
+                    Time = DateTime.Now
+                };
+                await BroadcastAsync(sysMsg, result.RemoteEndPoint);
             }
-        }
-        catch (OperationCanceledException)
-        {
+            else if (msg.Type == "Leave")
+            {
+                clients.TryRemove(result.RemoteEndPoint, out var name);
+                Console.WriteLine($"[{msg.Time:HH:mm}] {name} покинув чат");
 
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Помилка з клієнтом #{clientId}: {ex.Message}");
-        }
-        finally
-        {
-            stream?.Dispose();
-            client.Close();
-            clients.TryRemove(clientId, out _);
-            Console.WriteLine($"Клієнт #{clientId} від'єднався.");
+                var sysMsg = new ChatMessage
+                {
+                    Type = "System",
+                    Text = $"{name} покинув чат",
+                    Time = DateTime.Now
+                };
+                await BroadcastAsync(sysMsg, result.RemoteEndPoint);
+            }
+            else
+            {
+                
+                await BroadcastRawAsync(json, result.RemoteEndPoint);
+            }
         }
     }
 
-    private static async Task StopServerAsync()
+    private async Task BroadcastAsync(ChatMessage msg, IPEndPoint exclude)
     {
-        try
-        {
-            // скасування задач
-            cancellationTokenSource.Cancel();
-
-            // закриваємо з'єднання з клієнтами
-            foreach (var clientInfo in clients.Values)
-            {
-                try
-                {
-                    clientInfo.client.Close();
-                    clientInfo.client.Dispose();
-                    Console.WriteLine($"Клієнт з IP {clientInfo.ip}:{clientInfo.port} закрито.");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Помилка при закритті клієнта {clientInfo.ip}:{clientInfo.port}: {ex.Message}");
-                }
-            }
-            clients.Clear();
-
-            // зупиняємо прослуховування на сервері
-            listener?.Stop();
-            listener = null;
-
-            Console.WriteLine("Сервер повністю зупинено.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Помилка при зупинці сервера: {ex.Message}");
-        }
-        finally
-        {
-            // даємо час на завершення задач
-            await Task.Delay(100).ConfigureAwait(false);
-        }
+        var json = JsonSerializer.Serialize(msg);
+        await BroadcastRawAsync(json, exclude);
     }
 
-    private static async Task ProcessMessages()
+    private async Task BroadcastRawAsync(string json, IPEndPoint exclude)
     {
-        while (!cancellationTokenSource.Token.IsCancellationRequested)
+        var data = Encoding.UTF8.GetBytes(json);
+        foreach (var client in clients.Keys)
         {
-            try
-            {
-                if (messageQueue.TryDequeue(out var item))
-                {
-                    var (client, buffer) = item;
-                    if (!client.Connected) continue;
-
-                    string message = Encoding.UTF8.GetString(buffer);
-                    var clientEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
-                    int clientId = clients.FirstOrDefault(x => x.Value.ip == clientEndPoint.Address.ToString() && x.Value.port == clientEndPoint.Port).Key;
-                    Console.WriteLine($"Клієнт #{clientId} надіслав повідомлення: {message}");
-
-                    await Task.Delay(100, cancellationTokenSource.Token).ConfigureAwait(false);
-
-                    var response = new string(message.Reverse().ToArray());
-                    byte[] responseBytes = Encoding.UTF8.GetBytes(response);
-
-                    try
-                    {
-                        var stream = client.GetStream();
-                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length, cancellationTokenSource.Token).ConfigureAwait(false);
-                        Console.WriteLine($"Відповідь клієнту #{clientId}: {response}");
-                    }
-                    catch
-                    {
-                        Console.WriteLine($"Не вдалося надіслати повідомлення клієнту #{clientId}.");
-                    }
-                }
-                await Task.Delay(15, cancellationTokenSource.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-                break;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Помилка в ProcessMessages: {ex.Message}");
-            }
+            if (!client.Equals(exclude))
+                await server.SendAsync(data, data.Length, client);
         }
     }
+
+    static async Task Main() => await new UdpChatServer().StartAsync();
 }

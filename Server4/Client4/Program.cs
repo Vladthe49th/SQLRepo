@@ -1,95 +1,121 @@
 ﻿using System.Net.Sockets;
 using System.Net;
+using System.Text.Json;
 using System.Text;
 
-class Client
+class ChatMessage
 {
-    private const int DEFAULT_BUFLEN = 512;
-    private const int DEFAULT_PORT = 27015;
+    public string Type { get; set; } = "Message";
+    public string Name { get; set; } = "";
+    public string Color { get; set; } = "White";
+    public string Text { get; set; } = "";
+    public DateTime Time { get; set; } = DateTime.Now;
+}
 
-    static async Task Main()
+class UdpChatClient
+{
+    private const int serverPort = 9000;
+    private UdpClient? client;
+    private IPEndPoint? serverEndpoint;
+    private string userName = "";
+    private ConsoleColor userColor = ConsoleColor.White;
+
+    public async Task StartAsync()
     {
         Console.OutputEncoding = Encoding.UTF8;
         Console.Title = "КЛІЄНТСЬКА СТОРОНА";
-        string? pendingMessage = null;
-        var inputCancellation = new CancellationTokenSource();
 
+        Console.Write("Введіть нік: ");
+        userName = Console.ReadLine() ?? "Anonymous";
+
+        Console.Write("Введіть колір (Red, Green, Blue...): ");
+        if (Enum.TryParse(Console.ReadLine(), true, out ConsoleColor color))
+            userColor = color;
+
+        var serverIp = "127.0.0.1";
+        serverEndpoint = new IPEndPoint(IPAddress.Parse(serverIp), serverPort);
+
+        client = new UdpClient(0);
+        client.Connect(serverEndpoint);
+
+     
+        await SendAsync(new ChatMessage
+        {
+            Type = "Join",
+            Name = userName,
+            Color = userColor.ToString(),
+            Time = DateTime.Now
+        });
+
+        _ = Task.Run(ReceiveMessagesAsync);
+        await SendMessagesAsync();
+    }
+
+    private async Task ReceiveMessagesAsync()
+    {
         while (true)
         {
-            using var client = new TcpClient();
-            try
+            var result = await client.ReceiveAsync();
+            var json = Encoding.UTF8.GetString(result.Buffer);
+            var msg = JsonSerializer.Deserialize<ChatMessage>(json);
+
+            if (msg == null) continue;
+
+            if (msg.Type == "System")
             {
-                await client.ConnectAsync(IPAddress.Loopback, DEFAULT_PORT);
-                Console.WriteLine("Підключення до сервера встановлено.");
-                inputCancellation = new CancellationTokenSource();
-
-                using var stream = client.GetStream();
-
-                var receivingTask = Task.Run(async () =>
-                {
-                    while (client.Connected)
-                    {
-                        var buffer = new byte[DEFAULT_BUFLEN];
-                        int bytesReceived = await stream.ReadAsync(buffer, 0, buffer.Length);
-
-                        if (bytesReceived > 0)
-                        {
-                            string response = Encoding.UTF8.GetString(buffer, 0, bytesReceived);
-                            Console.WriteLine($"\nВідповідь від сервера: {response}");
-                        }
-                        else
-                        {
-                            Console.WriteLine("З'єднання з сервером перервано.");
-                            inputCancellation.Cancel();
-                            break;
-                        }
-                    }
-                });
-
-                if (pendingMessage != null)
-                {
-                    byte[] pendingBytes = Encoding.UTF8.GetBytes(pendingMessage);
-                    await stream.WriteAsync(pendingBytes, 0, pendingBytes.Length);
-                    Console.WriteLine($"Збережене повідомлення надіслано: {pendingMessage}");
-                    pendingMessage = null;
-                }
-
-                while (client.Connected)
-                {
-                    Console.Write("Введіть повідомлення для надсилання серверу: ");
-                    var readTask = Task.Run(() => Console.ReadLine(), inputCancellation.Token);
-                    var completedTask = await Task.WhenAny(readTask, receivingTask);
-
-                    if (completedTask == receivingTask)
-                    {
-                        // Console.WriteLine("Очікування вводу скасовано через відключення сервера.");
-                        if (!readTask.IsCompleted)
-                        {
-                            inputCancellation.Cancel();
-                        }
-                        pendingMessage = await readTask;
-                        break;
-                    }
-
-                    var message = readTask.Result;
-
-                    if (string.IsNullOrEmpty(message))
-                    {
-                        break;
-                    }
-
-                    byte[] messageBytes = Encoding.UTF8.GetBytes(message);
-                    await stream.WriteAsync(messageBytes, 0, messageBytes.Length);
-                    Console.WriteLine($"Повідомлення надіслано: {message}");
-                }
-
-                await receivingTask;
+                Console.ForegroundColor = ConsoleColor.Gray;
+                Console.WriteLine($"[{msg.Time:HH:mm}] {msg.Text}");
+                Console.ResetColor();
             }
-            catch
+            else
             {
-                Console.WriteLine("Сервер недоступний. Спроба підключення знову через 3 секунди...");
-                await Task.Delay(3000);
+                Console.ForegroundColor = Enum.TryParse(msg.Color, true, out ConsoleColor col) ? col : ConsoleColor.White;
+                Console.WriteLine($"[{msg.Time:HH:mm}] {msg.Name}: {msg.Text}");
+                Console.ResetColor();
             }
         }
     }
+
+    private async Task SendMessagesAsync()
+    {
+        while (true)
+        {
+            var text = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            if (text == "off")
+            {
+                await SendAsync(new ChatMessage
+                {
+                    Type = "Leave",
+                    Name = userName,
+                    Time = DateTime.Now
+                });
+                break;
+            }
+
+            await SendAsync(new ChatMessage
+            {
+                Type = "Message",
+                Name = userName,
+                Color = userColor.ToString(),
+                Text = text,
+                Time = DateTime.Now
+            });
+        }
+
+        client.Close();
+        Console.WriteLine("Відключено від сервера.");
+    }
+
+    private async Task SendAsync(ChatMessage msg)
+    {
+        var json = JsonSerializer.Serialize(msg);
+        var data = Encoding.UTF8.GetBytes(json);
+        await client.SendAsync(data, data.Length);
+    }
+
+    static async Task Main() => await new UdpChatClient().StartAsync();
+
 }
