@@ -5,10 +5,10 @@ using System.Text;
 
 class ChatMessage
 {
-    public string Type { get; set; } = "Message";
-    public string Name { get; set; } = "";
-    public string Color { get; set; } = "White";
-    public string Text { get; set; } = "";
+    public string Type { get; set; }
+    public string Name { get; set; } 
+    public string Color { get; set; } 
+    public string Text { get; set; } 
     public DateTime Time { get; set; } = DateTime.Now;
 }
 
