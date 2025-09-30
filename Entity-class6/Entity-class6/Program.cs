@@ -2,7 +2,7 @@
 using System.Reflection.Emit;
 using Microsoft.EntityFrameworkCore;
 
-namespace Entity_class6
+namespace Entity_home6
 {
     // Book class
     public class Book
