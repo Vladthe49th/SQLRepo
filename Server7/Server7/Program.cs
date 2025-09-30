@@ -86,8 +86,9 @@ class Program
 {
     static async Task Main()
     {
-        Console.OutputEncoding = Encoding.UTF8;
-        var server = new TcpChatServer(9000);
-        await server.StartAsync();
+       var port = Environment.GetEnvironmentVariable("PORT") != null
+    ? int.Parse(Environment.GetEnvironmentVariable("PORT"))
+    : 9000;
+
     }
 }
