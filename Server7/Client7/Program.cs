@@ -61,7 +61,7 @@ class Program
     static async Task Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
-        var client = new TcpChatClient("127.0.0.1", 9000);
+        var client = new TcpChatClient("https://render.com", 9000);
         await client.ConnectAsync();
     }
 }
