@@ -6,31 +6,31 @@ namespace WeatherApp
 {
     internal class Program
     {
-        private const string API_KEY = "YOUR_API_KEY"; // 🔑 заміни своїм ключем
+        private const string API_KEY = "92d90c38e46c5a426c8f1b7b76e34cfc"; 
 
         static void Main()
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            Console.Title = "🌤 Прогноз погоди - WeatherApp";
+            Console.Title = " WeatherApp";
 
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine("═══════════════════════════════════════════");
-            Console.WriteLine("🌍 Ласкаво просимо до нашого синоптика!");
+            Console.WriteLine("Welcome to our synoptic app!");
             Console.WriteLine("═══════════════════════════════════════════");
             Console.ResetColor();
 
-            Console.Write("🏙️  Введіть назву міста: ");
+            Console.Write(" Enter city name: ");
             string city = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrWhiteSpace(city))
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("❌ Місто не введено.");
+                Console.WriteLine("City not entered!");
                 Console.ResetColor();
                 return;
             }
 
-            Console.WriteLine($"\n📡 Отримуємо дані для міста {city}...\n");
+            Console.WriteLine($"\n Getting data for {city}...\n");
 
             GetCurrentWeather(city);
             Console.WriteLine();
@@ -42,9 +42,9 @@ namespace WeatherApp
 
             GetSeaTemperature(API_KEY);
 
-            Console.WriteLine("\n✅ Прогноз завершено!");
+            Console.WriteLine("\nForecast complete!");
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine("Натисніть Enter для виходу...");
+            Console.WriteLine("Press enter to exit...");
             Console.ResetColor();
             Console.ReadLine();
         }
@@ -67,7 +67,7 @@ namespace WeatherApp
                 if (!response.IsSuccessful)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"❌ Не вдалося отримати погоду: {response.StatusDescription}");
+                    Console.WriteLine($"Couldn`t get the weather: {response.StatusDescription}");
                     Console.ResetColor();
                     return;
                 }
@@ -82,17 +82,17 @@ namespace WeatherApp
                 double wind = json["wind"]?["speed"]?.Value<double>() ?? 0;
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("⛅ ПОТОЧНА ПОГОДА:");
+                Console.WriteLine("Current weather:");
                 Console.ResetColor();
-                Console.WriteLine($"📖 Стан: {desc} {icon}");
-                Console.WriteLine($"🌡 Температура: {temp}°C (відчувається як {feels}°C)");
-                Console.WriteLine($"💧 Вологість: {humidity}%");
-                Console.WriteLine($"💨 Вітер: {wind} м/с");
+                Console.WriteLine($"State: {desc} {icon}");
+                Console.WriteLine($"Temperature: {temp}°C");
+                Console.WriteLine($"Humidity: {humidity}%");
+                Console.WriteLine($"Wind: {wind} m/s");
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Помилка: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
                 Console.ResetColor();
             }
         }
@@ -115,7 +115,7 @@ namespace WeatherApp
                 if (!response.IsSuccessful)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"❌ Не вдалося отримати прогноз: {response.StatusDescription}");
+                    Console.WriteLine($"Couldn`t get the forecast: {response.StatusDescription}");
                     Console.ResetColor();
                     return;
                 }
@@ -125,7 +125,7 @@ namespace WeatherApp
 
                 if (list == null || list.Count < 9)
                 {
-                    Console.WriteLine("⚠️ Прогноз на завтра недоступний.");
+                    Console.WriteLine("Tomorrow`s forecast is unaccessible!");
                     return;
                 }
 
@@ -139,17 +139,17 @@ namespace WeatherApp
                 double wind = tomorrow["wind"]?["speed"]?.Value<double>() ?? 0;
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("📅 ПРОГНОЗ НА ЗАВТРА:");
+                Console.WriteLine("FORECAST FOR TOMORROW:");
                 Console.ResetColor();
-                Console.WriteLine($"📖 Стан: {desc} {icon}");
-                Console.WriteLine($"🌡 Температура: {temp}°C (відчувається як {feels}°C)");
+                Console.WriteLine($"State: {desc} {icon}");
+                Console.WriteLine($"Temperature: {temp}°C");
                 Console.WriteLine($"💧 Вологість: {humidity}%");
-                Console.WriteLine($"💨 Вітер: {wind} м/с");
+                Console.WriteLine($"💨 Wind: {wind} m/s");
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Помилка: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
                 Console.ResetColor();
             }
         }
@@ -173,7 +173,7 @@ namespace WeatherApp
                 if (!response.IsSuccessful)
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"❌ Не вдалося отримати температуру моря: {response.StatusDescription}");
+                    Console.WriteLine($"Couldn`t get the sea temperature: {response.StatusDescription}");
                     Console.ResetColor();
                     return;
                 }
@@ -182,14 +182,14 @@ namespace WeatherApp
                 double seaTemp = json["main"]?["temp"]?.Value<double>() ?? double.NaN;
 
                 Console.ForegroundColor = ConsoleColor.Blue;
-                Console.WriteLine("🌊 ТЕМПЕРАТУРА ВОДИ У ЧОРНОМУ МОРІ (біля Одеси):");
+                Console.WriteLine("Black sea temperature (near Odessa):");
                 Console.ResetColor();
                 Console.WriteLine($"🌡 {seaTemp}°C");
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Помилка: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
                 Console.ResetColor();
             }
         }
@@ -200,12 +200,12 @@ namespace WeatherApp
             if (string.IsNullOrEmpty(description)) return "☁️";
             description = description.ToLower();
 
-            if (description.Contains("сон") || description.Contains("ясн")) return "☀️";
-            if (description.Contains("дощ") || description.Contains("злива")) return "🌧️";
-            if (description.Contains("гроза")) return "⛈️";
-            if (description.Contains("сніг")) return "❄️";
-            if (description.Contains("туман")) return "🌫️";
-            if (description.Contains("хмар")) return "☁️";
+            if (description.Contains("Sun") || description.Contains("clear")) return "☀️";
+            if (description.Contains("rain") || description.Contains("злива")) return "🌧️";
+            if (description.Contains("thunder")) return "⛈️";
+            if (description.Contains("snow")) return "❄️";
+            if (description.Contains("fog")) return "🌫️";
+            if (description.Contains("cloud")) return "☁️";
 
             return "🌤️";
         }
