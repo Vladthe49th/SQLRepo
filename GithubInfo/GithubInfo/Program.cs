@@ -1,5 +1,4 @@
 ﻿using System;
-using GithubInfo;
 using RestSharp;
 
 namespace GitHubInfo
