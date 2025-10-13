@@ -37,9 +37,9 @@ namespace GitHubInfo
             Console.WriteLine("\nUser data:");
             Console.ResetColor();
 
-            Console.WriteLine($"👤 Name: {user.Name ?? "немає"}");
-            Console.WriteLine($"🔗 Login: {user.Login}");
-            Console.WriteLine($"🖼️ Avatar: {user.Avatar_url}");
+            Console.WriteLine($"Name: {user.Name ?? "немає"}");
+            Console.WriteLine($"Login: {user.Login}");
+            Console.WriteLine($"Avatar: {user.Avatar_url}");
             Console.WriteLine($"Registrtion data: {user.Created_at:dd.MM.yyyy}");
         }
     }
